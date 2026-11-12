@@ -4,66 +4,63 @@ import java.util.LinkedList;
 public class EcoRuta {
 
     private String nombre;
-
     private LinkedList<Aportante> listAportantes;
     private LinkedList<Entrega> listEntregas;
     private LinkedList<Comprobante> listComprobantes;
 
-   
     public EcoRuta(String nombre) {
         this.nombre = nombre;
-
         this.listAportantes = new LinkedList<>();
         this.listEntregas = new LinkedList<>();
         this.listComprobantes = new LinkedList<>();
     }
 
-   
     public boolean validarCodigoEntrega(String codigoNuevo) {
-        boolean validado = true;
-
+        if (codigoNuevo == null || codigoNuevo.trim().isEmpty()) {
+            return false;
+        }
         if (this.listEntregas != null) {
-            for (Entrega entrega : listEntregas) {
-                if (entrega != null) {
-                    if (codigoNuevo.equals(entrega.getCodigo())) {
-                        validado = false;
-                    }
+            for (Entrega entrega : this.listEntregas) {
+                if (entrega != null && entrega.getCodigo().equalsIgnoreCase(codigoNuevo.trim())) {
+                    return false;
                 }
             }
         }
-        return validado;
+        return true;
     }
 
-    
     public boolean registrarAportante(String identificacion, String nombre, String correo) {
-        for (Aportante aportante : this.listAportantes) {
-            if (aportante.identificacion().equals(identificacion)) {
-                return false;
-            }
+        if (identificacion == null || identificacion.trim().isEmpty() ||
+            nombre == null || nombre.trim().isEmpty() ||
+            correo == null || correo.trim().isEmpty()) {
+            return false;
         }
-        Aportante nuevoAportante = new Aportante(identificacion, nombre, correo);
+
+        if (consultarAportanteId(identificacion.trim()) != null) {
+            return false;
+        }
+
+        Aportante nuevoAportante = new Aportante(identificacion.trim(), nombre.trim(), correo.trim());
         return this.listAportantes.add(nuevoAportante);
     }
 
     public boolean registrarEntrega(String codigo, LocalDate fecha, Aportante aportante) {
-        
-        if (aportante != null && validarCodigoEntrega(codigo)) {
-            for (Entrega entrega : this.listEntregas) {
-                if (entrega.getCodigo().equals(codigo)) {
-                    return false;
-                }
-            }
-
-            Entrega nuevaEntrega = new Entrega(codigo, fecha, aportante);
-            return this.listEntregas.add(nuevaEntrega);
-        } else {
+        if (aportante == null || fecha == null || !validarCodigoEntrega(codigo)) {
             return false;
         }
+
+        // Verifica que el aportante realmente esté registrado en EcoRuta
+        Aportante aportanteRegistrado = consultarAportanteId(aportante.identificacion());
+        if (aportanteRegistrado == null) {
+            return false;
+        }
+
+        Entrega nuevaEntrega = new Entrega(codigo.trim(), fecha, aportanteRegistrado);
+        return this.listEntregas.add(nuevaEntrega);
     }
 
-    
     public boolean aceptarEntrega(Entrega entrega) {
-        if (entrega != null) {
+        if (entrega != null && this.listEntregas != null && this.listEntregas.contains(entrega)) {
             Comprobante nuevoComprobante = entrega.aceptar();
             if (nuevoComprobante != null) {
                 this.listComprobantes.add(nuevoComprobante);
@@ -73,14 +70,11 @@ public class EcoRuta {
         return false;
     }
 
-   
     public Aportante consultarAportanteId(String id) {
-        if (listAportantes != null) {
-            for (Aportante aportante : listAportantes) {
-                if (aportante != null) {
-                    if (aportante.identificacion().equals(id)) {
-                        return aportante;
-                    }
+        if (id != null && !id.trim().isEmpty() && this.listAportantes != null) {
+            for (Aportante aportante : this.listAportantes) {
+                if (aportante != null && aportante.identificacion().equalsIgnoreCase(id.trim())) {
+                    return aportante;
                 }
             }
         }
@@ -88,9 +82,9 @@ public class EcoRuta {
     }
 
     public Entrega consultarEntregaCodigo(String codigo) {
-        if (!codigo.equals("") && listEntregas != null) {
-            for (Entrega entrega : listEntregas) {
-                if (entrega != null && entrega.getCodigo().equals(codigo)) {
+        if (codigo != null && !codigo.trim().isEmpty() && this.listEntregas != null) {
+            for (Entrega entrega : this.listEntregas) {
+                if (entrega != null && entrega.getCodigo().equalsIgnoreCase(codigo.trim())) {
                     return entrega;
                 }
             }
@@ -99,9 +93,9 @@ public class EcoRuta {
     }
 
     public Comprobante consultarComprobanteCodigo(String codigoEntrega) {
-        if (!codigoEntrega.equals("") && listComprobantes != null) {
-            for (Comprobante comprobante : listComprobantes) {
-                if (comprobante != null && comprobante.codigoEntrega().equals(codigoEntrega)) {
+        if (codigoEntrega != null && !codigoEntrega.trim().isEmpty() && this.listComprobantes != null) {
+            for (Comprobante comprobante : this.listComprobantes) {
+                if (comprobante != null && comprobante.codigoEntrega().equalsIgnoreCase(codigoEntrega.trim())) {
                     return comprobante;
                 }
             }
@@ -123,19 +117,16 @@ public class EcoRuta {
     public int calcularValorAcumuladoAportante(String idAportante) {
         int valorAcumulado = 0;
 
-        if (idAportante != null && !idAportante.equals("") && this.listComprobantes != null) {
+        if (idAportante != null && !idAportante.trim().isEmpty() && this.listComprobantes != null) {
             for (Comprobante comprobante : this.listComprobantes) {
-                if (comprobante != null) {
-                    if (idAportante.equals(comprobante.identificacionAportante())) {
-                        valorAcumulado += comprobante.valorTotalReconocido();
-                    }
+                if (comprobante != null && comprobante.identificacionAportante().equalsIgnoreCase(idAportante.trim())) {
+                    valorAcumulado += comprobante.valorTotalReconocido();
                 }
             }
         }
         return valorAcumulado;
     }
 
-    
     public String getNombre() {
         return this.nombre;
     }
